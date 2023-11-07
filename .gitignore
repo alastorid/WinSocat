@@ -3,3 +3,7 @@
 /Tests/obj
 /Tests/bin
 *.user
+*.suo
+*.bin
+*.vsidx
+*.futdcache.v2
