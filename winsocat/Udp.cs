@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Firejox.App.WinSocat;
 
-public class TcpStreamPiperInfo
+public class UdpStreamPiperInfo
 {
     private readonly string _host;
     private readonly int _port;
@@ -11,15 +11,15 @@ public class TcpStreamPiperInfo
     public string Host => _host;
     public int Port => _port;
 
-    public TcpStreamPiperInfo(string host, int port)
+    public UdpStreamPiperInfo(string host, int port)
     {
         _host = host;
         _port = port;
     }
 
-    public static TcpStreamPiperInfo TryParse(AddressElement element)
+    public static UdpStreamPiperInfo TryParse(AddressElement element)
     {
-        if (!element.Tag.Equals("TCP", StringComparison.OrdinalIgnoreCase)) return null!;
+        if (!element.Tag.Equals("UDP", StringComparison.OrdinalIgnoreCase)) return null!;
         
         string host;
         int sepIndex = element.Address.LastIndexOf(':');
@@ -31,11 +31,11 @@ public class TcpStreamPiperInfo
             
         int port = Int32.Parse(element.Address.Substring(sepIndex + 1));
 
-        return new TcpStreamPiperInfo(host, port);
+        return new UdpStreamPiperInfo(host, port);
     }
 }
 
-public class TcpListenPiperInfo
+public class UdpListenPiperInfo
 {
     private readonly IPAddress _address;
     private readonly int _port;
@@ -43,15 +43,15 @@ public class TcpListenPiperInfo
     public IPAddress Address => _address;
     public int Port => _port;
 
-    public TcpListenPiperInfo(IPAddress address, int port)
+    public UdpListenPiperInfo(IPAddress address, int port)
     {
         _address = address;
         _port = port;
     }
     
-    public static TcpListenPiperInfo TryParse(AddressElement element)
+    public static UdpListenPiperInfo TryParse(AddressElement element)
     {
-        if (element.Tag.Equals("TCP-LISTEN", StringComparison.OrdinalIgnoreCase))
+        if (element.Tag.Equals("UDP-LISTEN", StringComparison.OrdinalIgnoreCase))
         {
             IPAddress address;
             int sepIndex = element.Address.LastIndexOf(':');
@@ -62,34 +62,34 @@ public class TcpListenPiperInfo
                 address = IPAddress.Parse(element.Address.Substring(0, sepIndex));
             
             int port = Int32.Parse(element.Address.Substring(sepIndex + 1));
-            return new TcpListenPiperInfo(address, port);
+            return new UdpListenPiperInfo(address, port);
         }
 
         return null!;
     }
 }
 
-public class TcpListenPiper : IListenPiper
+public class UdpListenPiper : IListenPiper
 {
-    private TcpListener _server;
+    private UdpListener _server;
 
-    public TcpListenPiper(TcpListener server)
+    public UdpListenPiper(UdpListener server)
     {
         _server = server;
         _server.Start();
     }
     
-    public TcpListenPiper(IPAddress address, int port) : this(new TcpListener(address, port)) {}
+    public UdpListenPiper(IPAddress address, int port) : this(new UdpListener(address, port)) {}
 
     public IPiper NewIncomingPiper()
     {
-        return new TcpStreamPiper(_server.AcceptTcpClient());
+        return new UdpStreamPiper(_server.AcceptUdpClient());
     }
 
     public async Task<IPiper> NewIncomingPiperAsync()
     {
-        var client = await _server.AcceptTcpClientAsync();
-        return new TcpStreamPiper(client);
+        var client = await _server.AcceptUdpClientAsync();
+        return new UdpStreamPiper(client);
     }
 
     public void Close()
@@ -118,68 +118,68 @@ public class TcpListenPiper : IListenPiper
 }
 
 
-public class TcpListenPiperStrategy : ListenPiperStrategy
+public class UdpListenPiperStrategy : ListenPiperStrategy
 {
-    private readonly TcpListenPiperInfo _info;
-    public TcpListenPiperInfo Info => _info;
+    private readonly UdpListenPiperInfo _info;
+    public UdpListenPiperInfo Info => _info;
 
-    public TcpListenPiperStrategy(TcpListenPiperInfo info)
+    public UdpListenPiperStrategy(UdpListenPiperInfo info)
     {
         _info = info;
     }
 
     protected override IListenPiper NewListenPiper()
     {
-        return new TcpListenPiper(_info.Address, _info.Port);
+        return new UdpListenPiper(_info.Address, _info.Port);
     }
 
-    public static TcpListenPiperStrategy TryParse(AddressElement element)
+    public static UdpListenPiperStrategy TryParse(AddressElement element)
     {
-        TcpListenPiperInfo info;
+        UdpListenPiperInfo info;
         
-        if ((info = TcpListenPiperInfo.TryParse(element)) != null)
-            return new TcpListenPiperStrategy(info);
+        if ((info = UdpListenPiperInfo.TryParse(element)) != null)
+            return new UdpListenPiperStrategy(info);
 
         return null!;
     }
 }
 
-public class TcpStreamPiperStrategy : PiperStrategy
+public class UdpStreamPiperStrategy : PiperStrategy
 {
-    private readonly TcpStreamPiperInfo _info;
-    public TcpStreamPiperInfo Info => _info;
+    private readonly UdpStreamPiperInfo _info;
+    public UdpStreamPiperInfo Info => _info;
 
-    public TcpStreamPiperStrategy(TcpStreamPiperInfo info)
+    public UdpStreamPiperStrategy(UdpStreamPiperInfo info)
     {
         _info = info;
     }
 
     protected override IPiper NewPiper()
     {
-        return new TcpStreamPiper(_info.Host, _info.Port);
+        return new UdpStreamPiper(_info.Host, _info.Port);
     }
 
-    public static TcpStreamPiperStrategy TryParse(AddressElement element)
+    public static UdpStreamPiperStrategy TryParse(AddressElement element)
     {
-        TcpStreamPiperInfo info;
+        UdpStreamPiperInfo info;
 
-        if ((info = TcpStreamPiperInfo.TryParse(element)) != null)
-            return new TcpStreamPiperStrategy(info);
+        if ((info = UdpStreamPiperInfo.TryParse(element)) != null)
+            return new UdpStreamPiperStrategy(info);
 
         return null!;
     }
 }
 
-public class TcpStreamPiper : StreamPiper
+public class UdpStreamPiper : StreamPiper
 {
-    private TcpClient _client;
+    private UdpClient _client;
 
-    public TcpStreamPiper(TcpClient client) : base(client.GetStream())
+    public UdpStreamPiper(UdpClient client) : base(client.GetStream())
     {
         _client = client;
     }
     
-    public TcpStreamPiper(string host, int port) : this(new TcpClient(host, port)) {}
+    public UdpStreamPiper(string host, int port) : this(new UdpClient(host, port)) {}
 
     protected override void Dispose(bool disposing)
     {
@@ -198,27 +198,27 @@ public class TcpStreamPiper : StreamPiper
     }
 }
 
-public class TcpStreamPiperFactory : IPiperFactory
+public class UdpStreamPiperFactory : IPiperFactory
 {
-    private readonly TcpStreamPiperInfo _info;
-    public TcpStreamPiperInfo Info => _info;
+    private readonly UdpStreamPiperInfo _info;
+    public UdpStreamPiperInfo Info => _info;
 
-    public TcpStreamPiperFactory(TcpStreamPiperInfo info)
+    public UdpStreamPiperFactory(UdpStreamPiperInfo info)
     {
         _info = info;
     }
 
     public IPiper NewPiper()
     {
-        return new TcpStreamPiper(_info.Host, _info.Port);
+        return new UdpStreamPiper(_info.Host, _info.Port);
     }
 
-    public static TcpStreamPiperFactory TryParse(AddressElement element)
+    public static UdpStreamPiperFactory TryParse(AddressElement element)
     {
-        TcpStreamPiperInfo info;
+        UdpStreamPiperInfo info;
 
-        if ((info = TcpStreamPiperInfo.TryParse(element)) != null)
-            return new TcpStreamPiperFactory(info);
+        if ((info = UdpStreamPiperInfo.TryParse(element)) != null)
+            return new UdpStreamPiperFactory(info);
 
         return null!;
     }
