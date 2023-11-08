@@ -70,4 +70,5 @@ jobs:
           asset_name: winsocat-portable-arm64-${{ steps.get-version.outputs.result }}.zip
           asset_content_type: application/zip
       - name: Push package to nuget.org
+        if: ${{ github.repository_owner == 'firejox' }}
         run:  dotnet nuget push winsocat.${{ steps.get-version.outputs.result }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
