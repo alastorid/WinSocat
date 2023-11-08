@@ -97,18 +97,21 @@ public class UdpClientEx : UdpClient
     public UdpClientEx(): base()
     {
         _remoteEndPoint = null!;
+        _stream = Stream.Null;
     }
 
     // Used by client 
     public UdpClientEx(string hostname, int port) : base(hostname, port)
     {
         _remoteEndPoint = base.Client.RemoteEndPoint as IPEndPoint ?? throw new Exception("Help me!!!");
+        _stream = new FakeUdpNetworkStream(this);
     }
 
     // Used by listener
     public UdpClientEx(IPEndPoint localEP) : base(localEP)
     {
         _remoteEndPoint = null!;
+        _stream = Stream.Null;
     }
 
     // .oooooo..o oooooooooooo   .oooooo.   ooooo     ooo ooooooooo.   ooooo ooooooooooooo oooooo   oooo      ooooo   ooooo   .oooooo.   ooooo        oooooooooooo 
@@ -132,7 +135,7 @@ public class UdpClientEx : UdpClient
     {
         lock(_stream)
         {
-            if( _stream == null )
+            if( _stream == Stream.Null )
             {
                 _stream = new FakeUdpNetworkStream(this);
             }
@@ -165,7 +168,7 @@ public class FakeUdpNetworkStream : Stream
     public FakeUdpNetworkStream(UdpClientEx udpClient)
     {
         _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
-        _remoteEndPoint = udpClient.Client.RemoteEndPoint as IPEndPoint ?? throw new ArgumentNullException(nameof(udpClient.Client.RemoteEndPoint)); ;
+        _remoteEndPoint = udpClient.Client.RemoteEndPoint as IPEndPoint ?? throw new ArgumentNullException(nameof(udpClient.Client.RemoteEndPoint));
     }
 
     public override bool CanRead => true;
