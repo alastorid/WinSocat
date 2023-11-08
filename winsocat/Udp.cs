@@ -93,16 +93,19 @@ public class UdpClientEx : UdpClient
         }
     }
 
+    // Used by listener
     public UdpClientEx(): base()
     {
         _remoteEndPoint = null!;
     }
 
+    // Used by client 
     public UdpClientEx(string hostname, int port) : base(hostname, port)
     {
         _remoteEndPoint = base.Client.RemoteEndPoint as IPEndPoint ?? throw new Exception("Help me!!!");
     }
 
+    // Used by listener
     public UdpClientEx(IPEndPoint localEP) : base(localEP)
     {
         _remoteEndPoint = null!;
@@ -136,13 +139,25 @@ public class UdpClientEx : UdpClient
         }
         return _stream;
     }
+
+    
+    public new void Connect(IPEndPoint endPoint, bool force=false)
+    {
+        // If force, get UDP from everywhere
+        if (force)
+        {
+            base.Connect(endPoint);
+        }
+        _remoteEndPoint = endPoint;
+        base.Active = true;
+    }
 }
 
 public class FakeUdpNetworkStream : Stream
 {
     private readonly UdpClientEx _udpClient;
     private IPEndPoint _remoteEndPoint;
-
+    
     public FakeUdpNetworkStream(UdpClientEx udpClient)
     {
         _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
@@ -153,7 +168,7 @@ public class FakeUdpNetworkStream : Stream
     public override bool CanSeek => false;
     public override bool CanWrite => true;
     public override long Length => throw new NotSupportedException();
-
+    
     public override long Position
     {
         get => throw new NotSupportedException();
@@ -164,10 +179,20 @@ public class FakeUdpNetworkStream : Stream
     {
         throw new NotImplementedException();
     }
-
+    
+    // I have no buffer
+    // Data loss if buffer too small
     public override int Read(byte[] buffer, int offset, int count)
     {
-        throw new NotImplementedException();
+        var actual_copy = 0;
+        IPEndPoint? remoteEP = null;
+        var data = _udpClient.Receive(ref remoteEP);
+        if (data != null)
+        {
+            actual_copy = data.Length < count ? data.Length : count;
+            Buffer.BlockCopy(data, 0, buffer, offset, actual_copy);
+        }
+        return actual_copy;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
@@ -182,7 +207,9 @@ public class FakeUdpNetworkStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        throw new NotImplementedException();
+        var mybuffer = new byte[count];
+        Buffer.BlockCopy(buffer, offset, mybuffer, 0, count);
+        _udpClient.Send(mybuffer, count, _remoteEndPoint);
     }
 }
 
@@ -231,7 +258,7 @@ public class FakeUdpListener
 
         client.Connect(remoteEndPoint);
 
-        return _udpClient;
+        return client;
     }
 
     public UdpClientEx AcceptUdpClient()
