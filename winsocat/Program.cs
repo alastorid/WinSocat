@@ -51,7 +51,11 @@ namespace Firejox.App.WinSocat
                 return strategy;
             if ((strategy = TcpListenPiperStrategy.TryParse(element)) != null)
                 return strategy;
-            
+            if ((strategy = UdpStreamPiperStrategy.TryParse(element)) != null)
+                return strategy;
+            if ((strategy = UdpListenPiperStrategy.TryParse(element)) != null)
+                return strategy;
+
             if ((strategy = ProcPiperStrategy.TryParse(element)) != null)
                 return strategy;
 
@@ -92,6 +96,9 @@ namespace Firejox.App.WinSocat
                 return factory;
 
             if ((factory = TcpStreamPiperFactory.TryParse(element)) != null)
+                return factory;
+
+            if ((factory = UdpStreamPiperFactory.TryParse(element)) != null)
                 return factory;
 
             if ((factory = ProcPiperFactory.TryParse(element)) != null)

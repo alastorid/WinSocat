@@ -69,17 +69,122 @@ public class UdpListenPiperInfo
     }
 }
 
+public static class UdpClientExtensions
+{
+    public static FakeUdpNetworkStream GetStream(this UdpClient udpClient)
+    {
+        return new FakeUdpNetworkStream(udpClient);
+    }
+}
+
+public class FakeUdpNetworkStream : Stream
+{
+    private readonly UdpClient _udpClient;
+    private IPEndPoint _remoteEndPoint;
+
+    public FakeUdpNetworkStream(UdpClient udpClient)
+    {
+        _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
+        _remoteEndPoint = udpClient.Client.RemoteEndPoint as IPEndPoint ?? throw new ArgumentNullException(nameof(udpClient.Client.RemoteEndPoint)); ;
+    }
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => true;
+    public override long Length => throw new NotSupportedException();
+
+    public override long Position
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public override void Flush()
+    {
+        throw new NotImplementedException();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void SetLength(long value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        throw new NotImplementedException();
+    }
+}
+public class FakeUdpListener
+{
+    private UdpClient _udpClient;
+    private IPEndPoint _localEndPoint;
+    private bool _isListening;
+
+    public FakeUdpListener(IPAddress localaddr, int port)
+    {
+        _localEndPoint = new IPEndPoint(localaddr, port);
+        _udpClient = new UdpClient(_localEndPoint);
+    }
+
+    public void Start()
+    {
+        _isListening = true;
+    }
+
+    public void Stop()
+    {
+        _isListening = false;
+        _udpClient.Close();
+    }
+
+    public async Task<UdpClient> AcceptUdpClientAsync()
+    {
+        if (!_isListening)
+        {
+            throw new InvalidOperationException("Listener is not started.");
+        }
+
+        UdpReceiveResult result = await _udpClient.ReceiveAsync();
+        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
+
+        UdpClient client = new UdpClient();
+        client.Connect(remoteEndPoint);
+
+        return client;
+    }
+
+    public UdpClient AcceptUdpClient()
+    {
+        return AcceptUdpClientAsync().GetAwaiter().GetResult();
+    }
+
+    public void Dispose()
+    {
+        _udpClient?.Dispose();
+    }
+}
+
 public class UdpListenPiper : IListenPiper
 {
-    private UdpListener _server;
+    private FakeUdpListener _server;
 
-    public UdpListenPiper(UdpListener server)
+    public UdpListenPiper(FakeUdpListener server)
     {
         _server = server;
         _server.Start();
     }
     
-    public UdpListenPiper(IPAddress address, int port) : this(new UdpListener(address, port)) {}
+    public UdpListenPiper(IPAddress address, int port) : this(new FakeUdpListener(address, port)) {}
 
     public IPiper NewIncomingPiper()
     {
@@ -116,7 +221,6 @@ public class UdpListenPiper : IListenPiper
         }
     }
 }
-
 
 public class UdpListenPiperStrategy : ListenPiperStrategy
 {
