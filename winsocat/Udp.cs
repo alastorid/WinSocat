@@ -225,9 +225,12 @@ public class FakeUdpListener
         }
 
         UdpReceiveResult result = await _udpClient.ReceiveAsync();
-        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
-        UdpClientEx client = new UdpClientEx();
-        client.Connect(remoteEndPoint);
+        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
+
+        UdpClientEx client = new UdpClientEx();
+
+        client.Connect(remoteEndPoint);
+
         return _udpClient;
     }
 
