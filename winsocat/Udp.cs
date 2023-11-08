@@ -140,8 +140,12 @@ public class UdpClientEx : UdpClient
         return _stream;
     }
 
-    
-    public new void Connect(IPEndPoint endPoint, bool force=false)
+    public new void Connect(IPEndPoint endPoint)
+    {
+        this.FakeConnect(endPoint, false);
+    }
+
+    public void FakeConnect(IPEndPoint endPoint, bool force=false)
     {
         // If force, get UDP from everywhere
         if (force)
