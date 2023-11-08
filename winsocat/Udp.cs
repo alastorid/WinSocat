@@ -69,20 +69,75 @@ public class UdpListenPiperInfo
     }
 }
 
-public static class UdpClientExtensions
+//
+// A special UdpClient that care about WinDBG more about security risk
+// Side Note: WinDBG KD UDP traffic are encrypted.
+//
+public class UdpClientEx : UdpClient
 {
-    public static FakeUdpNetworkStream GetStream(this UdpClient udpClient)
+    private Stream _stream;
+    private IPEndPoint _remoteEndPoint;
+    public IPEndPoint RemoteEndPoint
     {
-        return new FakeUdpNetworkStream(udpClient);
+        get
+        {
+            lock(_remoteEndPoint)
+            {
+                return _remoteEndPoint;
+            }            
+        }
+        set { 
+            lock(_remoteEndPoint)
+            {
+                _remoteEndPoint = value;
+            }                
+        }
+    }
+
+    public UdpClientEx(): base()
+    {
+        _remoteEndPoint = null!;
+    }
+
+    public UdpClientEx(string hostname, int port) : base(hostname, port)
+    {
+        _remoteEndPoint = base.Client.RemoteEndPoint as IPEndPoint ?? throw new Exception("Help me!!!");
+    }
+
+    public UdpClientEx(IPEndPoint localEP) : base(localEP)
+    {
+        _remoteEndPoint = null!;
+    }
+
+    //
+    // Record the last RemoteEP to send data!!!
+    // Zero Security!!! but it works great for WinDBG Kernel Debug
+    // 
+    public new async Task<UdpReceiveResult> ReceiveAsync()
+    {
+        var result = await base.ReceiveAsync();
+        this.RemoteEndPoint = result.RemoteEndPoint;
+        return result;
+    }
+    public Stream GetStream()
+    {
+        lock(_stream)
+        {
+            if( _stream == null )
+            {
+                _stream = new FakeUdpNetworkStream(this);
+            }
+        }
+        return _stream;
     }
 }
 
 public class FakeUdpNetworkStream : Stream
 {
-    private readonly UdpClient _udpClient;
+    private readonly UdpClientEx _udpClient;
     private IPEndPoint _remoteEndPoint;
 
-    public FakeUdpNetworkStream(UdpClient udpClient)
+    public FakeUdpNetworkStream(UdpClientEx udpClient)
     {
         _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
         _remoteEndPoint = udpClient.Client.RemoteEndPoint as IPEndPoint ?? throw new ArgumentNullException(nameof(udpClient.Client.RemoteEndPoint)); ;
@@ -126,14 +181,16 @@ public class FakeUdpNetworkStream : Stream
 }
 public class FakeUdpListener
 {
-    private UdpClient _udpClient;
+    private UdpClientEx _udpClient;
     private IPEndPoint _localEndPoint;
     private bool _isListening;
+    private long _gaveOneClient;
 
     public FakeUdpListener(IPAddress localaddr, int port)
     {
         _localEndPoint = new IPEndPoint(localaddr, port);
-        _udpClient = new UdpClient(_localEndPoint);
+        _udpClient = new UdpClientEx(_localEndPoint);
+        _gaveOneClient = 0;
     }
 
     public void Start()
@@ -147,23 +204,27 @@ public class FakeUdpListener
         _udpClient.Close();
     }
 
-    public async Task<UdpClient> AcceptUdpClientAsync()
+    public async Task<UdpClientEx> AcceptUdpClientAsync()
     {
         if (!_isListening)
         {
             throw new InvalidOperationException("Listener is not started.");
         }
 
+        if(0 != Interlocked.CompareExchange(ref _gaveOneClient, 1, 0))
+        {
+            // forever
+            return await new TaskCompletionSource<UdpClientEx>().Task;
+        }
+
         UdpReceiveResult result = await _udpClient.ReceiveAsync();
-        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
-
-        UdpClient client = new UdpClient();
-        client.Connect(remoteEndPoint);
-
-        return client;
+        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
+        UdpClientEx client = new UdpClientEx();
+        client.Connect(remoteEndPoint);
+        return _udpClient;
     }
 
-    public UdpClient AcceptUdpClient()
+    public UdpClientEx AcceptUdpClient()
     {
         return AcceptUdpClientAsync().GetAwaiter().GetResult();
     }
@@ -276,14 +337,14 @@ public class UdpStreamPiperStrategy : PiperStrategy
 
 public class UdpStreamPiper : StreamPiper
 {
-    private UdpClient _client;
+    private UdpClientEx _client;
 
-    public UdpStreamPiper(UdpClient client) : base(client.GetStream())
+    public UdpStreamPiper(UdpClientEx client) : base(client.GetStream())
     {
         _client = client;
     }
     
-    public UdpStreamPiper(string host, int port) : this(new UdpClient(host, port)) {}
+    public UdpStreamPiper(string host, int port) : this(new UdpClientEx(host, port)) {}
 
     protected override void Dispose(bool disposing)
     {
