@@ -1,6 +1,5 @@
 ﻿using System.Net.Sockets;
 using System.Net;
-
 namespace Firejox.App.WinSocat;
 
 public class UdpStreamPiperInfo
@@ -109,9 +108,16 @@ public class UdpClientEx : UdpClient
         _remoteEndPoint = null!;
     }
 
+    // .oooooo..o oooooooooooo   .oooooo.   ooooo     ooo ooooooooo.   ooooo ooooooooooooo oooooo   oooo      ooooo   ooooo   .oooooo.   ooooo        oooooooooooo 
+    //d8P'    `Y8 `888'     `8  d8P'  `Y8b  `888'     `8' `888   `Y88. `888' 8'   888   `8  `888.   .8'       `888'   `888'  d8P'  `Y8b  `888'        `888'     `8 
+    //Y88bo.       888         888           888       8   888   .d88'  888       888        `888. .8'         888     888  888      888  888          888         
+    // `"Y8888o.   888oooo8    888           888       8   888ooo88P'   888       888         `888.8'          888ooooo888  888      888  888          888oooo8    
+    //     `"Y88b  888    "    888           888       8   888`88b.     888       888          `888'           888     888  888      888  888          888    "    
+    //oo     .d8P  888       o `88b    ooo   `88.    .8'   888  `88b.   888       888           888            888     888  `88b    d88'  888       o  888       o 
+    //8""88888P'  o888ooooood8  `Y8bood8P'     `YbodP'    o888o  o888o o888o     o888o         o888o          o888o   o888o  `Y8bood8P'  o888ooooood8 o888ooooood8 
     //
-    // Record the last RemoteEP to send data!!!
-    // Zero Security!!! but it works great for WinDBG Kernel Debug
+    // Note: It records the last RemoteEP to send data to!!!
+    // It is intended to make WinDBG Kernel Debug over internet work
     // 
     public new async Task<UdpReceiveResult> ReceiveAsync()
     {
@@ -179,6 +185,7 @@ public class FakeUdpNetworkStream : Stream
         throw new NotImplementedException();
     }
 }
+
 public class FakeUdpListener
 {
     private UdpClientEx _udpClient;
