@@ -59,7 +59,7 @@ public class UdpListenPiperInfo
                 address = IPAddress.Any;
             else
                 address = IPAddress.Parse(element.Address.Substring(0, sepIndex));
-            
+
             int port = Int32.Parse(element.Address.Substring(sepIndex + 1));
             return new UdpListenPiperInfo(address, port);
         }
@@ -80,16 +80,10 @@ public class UdpClientEx : UdpClient
     {
         get
         {
-            lock(_remoteEndPoint)
-            {
-                return _remoteEndPoint;
-            }            
+            return _remoteEndPoint;                        
         }
         set { 
-            lock(_remoteEndPoint)
-            {
-                _remoteEndPoint = value;
-            }                
+            _remoteEndPoint = value;                            
         }
     }
 
@@ -133,12 +127,9 @@ public class UdpClientEx : UdpClient
     }
     public Stream GetStream()
     {
-        lock(_stream)
+        if (_stream == Stream.Null)
         {
-            if( _stream == Stream.Null )
-            {
-                _stream = new FakeUdpNetworkStream(this);
-            }
+            _stream = new FakeUdpNetworkStream(this);
         }
         return _stream;
     }
@@ -150,7 +141,7 @@ public class UdpClientEx : UdpClient
 
     public void FakeConnect(IPEndPoint endPoint, bool force=false)
     {
-        // If force, get UDP from everywhere
+        // If not force, get UDP from everywhere
         if (force)
         {
             base.Connect(endPoint);
@@ -214,10 +205,88 @@ public class FakeUdpNetworkStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
+        Console.WriteLine("write!!!");
         var mybuffer = new byte[count];
         Buffer.BlockCopy(buffer, offset, mybuffer, 0, count);
-        _udpClient.Send(mybuffer, count, _remoteEndPoint);
+        _udpClient.Send(mybuffer, count, _remoteEndPoint);   
     }
+    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        var d = new ReadOnlyMemory<byte>(buffer, offset, count);
+        Console.WriteLine(_remoteEndPoint);
+        try
+        {
+            if(_udpClient.RemoteEndPoint!= null)
+            {
+                return _udpClient.SendAsync(d, cancellationToken).AsTask();
+            }
+            else
+            {
+                return _udpClient.SendAsync(d, _remoteEndPoint, cancellationToken).AsTask();
+            }
+        }
+        catch (Exception e)
+        { 
+            Console.WriteLine(e); 
+        }   
+        return Task.CompletedTask;
+    }
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine("WriteAsync!");
+        return base.WriteAsync(buffer, cancellationToken);
+    }
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        Console.WriteLine("Write!");
+        base.Write(buffer);
+    }
+    public override void WriteByte(byte value)
+    {
+        Console.Write("WriteByte");
+        base.WriteByte(value);
+    }
+    public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+    {
+        Console.Write("BeginWrite!");
+        return base.BeginWrite(buffer, offset, count, callback, state);
+    }
+    public override void EndWrite(IAsyncResult asyncResult)
+    {
+        Console.WriteLine("EndWrite!");
+        base.EndWrite(asyncResult);
+    }
+    public override void CopyTo(Stream destination, int bufferSize)
+    {
+        Console.WriteLine("CopyTo!");
+        base.CopyTo(destination, bufferSize);
+    }
+    public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+    {
+        Console.WriteLine("CopyToAsync!");
+        return base.CopyToAsync(destination, bufferSize, cancellationToken);
+    }
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        Console.WriteLine("ReadAsync!!");
+        return base.ReadAsync(buffer, offset, count, cancellationToken);
+    }
+    public override int Read(Span<byte> buffer)
+    {
+        Console.WriteLine("Read!");
+        return base.Read(buffer);
+    }
+    public override int ReadByte()
+    {
+        Console.WriteLine("ReadByte!");
+        return base.ReadByte();
+    }
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine("ReadAsync!");
+        return base.ReadAsync(buffer, cancellationToken);
+    }
+    
 }
 
 public class FakeUdpListener
@@ -229,7 +298,9 @@ public class FakeUdpListener
 
     public FakeUdpListener(IPAddress localaddr, int port)
     {
+        
         _localEndPoint = new IPEndPoint(localaddr, port);
+        Console.WriteLine(_localEndPoint); 
         _udpClient = new UdpClientEx(_localEndPoint);
         _gaveOneClient = 0;
     }
@@ -241,6 +312,7 @@ public class FakeUdpListener
 
     public void Stop()
     {
+        Console.WriteLine("Stop");
         _isListening = false;
         _udpClient.Close();
     }
@@ -252,14 +324,16 @@ public class FakeUdpListener
             throw new InvalidOperationException("Listener is not started.");
         }
 
-        if(0 != Interlocked.CompareExchange(ref _gaveOneClient, 1, 0))
+        if (0 != Interlocked.CompareExchange(ref _gaveOneClient, 1, 0))
         {
+            Console.WriteLine("hihi!!!");
             // forever
             return await new TaskCompletionSource<UdpClientEx>().Task;
         }
-
+        
         UdpReceiveResult result = await _udpClient.ReceiveAsync();
         IPEndPoint remoteEndPoint = result.RemoteEndPoint;
+        Console.WriteLine(new System.Diagnostics.StackTrace());
 
         UdpClientEx client = new UdpClientEx();
 
@@ -419,6 +493,7 @@ public class UdpStreamPiperFactory : IPiperFactory
 
     public IPiper NewPiper()
     {
+        Console.WriteLine("newPiper!!!");
         return new UdpStreamPiper(_info.Host, _info.Port);
     }
 
