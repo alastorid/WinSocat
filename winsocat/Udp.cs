@@ -104,7 +104,7 @@ public class UdpClientEx : UdpClient
     // Used by client 
     public UdpClientEx(string hostname, int port) : base(port)
     {
-        Console.WriteLine("UdpClientEx!");
+        // Console.WriteLine("UdpClientEx!");
         base.Connect(hostname, port);
         _remoteEndPoint = base.Client.RemoteEndPoint as IPEndPoint ?? throw new Exception("Help me!!!");
         _stream = new FakeUdpNetworkStream(this);
@@ -164,7 +164,7 @@ public static class whatever
 {
     public static void k()
     {
-        Console.WriteLine(new System.Diagnostics.StackTrace());
+        // Console.WriteLine(new System.Diagnostics.StackTrace());
     }
     public static void AddRange(this List<byte> me, byte[] buffer, int offset, int count)
     {
@@ -192,7 +192,7 @@ public class FakeUdpNetworkStream : Stream
     {
         get
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
             return 5566;
         }
     }
@@ -201,18 +201,18 @@ public class FakeUdpNetworkStream : Stream
     {
         get
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
             return 5566;
         }
         set
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         }
     }
 
     public override void Flush()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         //throw new NotImplementedException();
     }
 
@@ -232,20 +232,20 @@ public class FakeUdpNetworkStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         throw new NotImplementedException();
     }
 
     public override void SetLength(long value)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         throw new NotImplementedException();
     }
     const int magic = 1024;
     List<byte> _writeBuffer = new List<byte>();
     public override void Write(byte[] buffer, int offset, int count)
     {
-        Console.WriteLine("Write(byte[] buffer, int offset, int count)!");
+        // Console.WriteLine("Write(byte[] buffer, int offset, int count)!");
 
         _writeBuffer.AddRange(buffer, offset, count);
         var theCount = Math.Min(magic, count - offset);
@@ -255,8 +255,8 @@ public class FakeUdpNetworkStream : Stream
     }
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        Console.WriteLine("WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
-        Console.WriteLine($"send to {_remoteEndPoint}");
+        // Console.WriteLine("WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
+        // Console.WriteLine($"send to {_remoteEndPoint}");
         var d = new ReadOnlyMemory<byte>(buffer, offset, count);
         try
         {
@@ -271,9 +271,9 @@ public class FakeUdpNetworkStream : Stream
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            // Console.WriteLine(e);
         }
-        Console.WriteLine("hihi");
+        // Console.WriteLine("hihi");
     }
     public void bind_it_now()
     {
@@ -288,58 +288,55 @@ public class FakeUdpNetworkStream : Stream
     }
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine("WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)!");
-
-        await this.WriteAsync(buffer.Span.ToArray(), 0, buffer.Length, cancellationToken);
-        Console.WriteLine("hihihih!!");
-        whatever.k();
+        // Console.WriteLine("WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)!");
+        await this.WriteAsync(buffer.Span.ToArray(), 0, buffer.Length, cancellationToken);        
     }
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.BeginRead(buffer, offset, count, callback, state);
     }
     public override void Close()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         base.Close();
     }
     public override ValueTask DisposeAsync()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.DisposeAsync();
     }
     public override int EndRead(IAsyncResult asyncResult)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.EndRead(asyncResult);
     }
     public override bool Equals(object? obj)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.Equals(obj);
     }
     public override int GetHashCode()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.GetHashCode();
     }
     public override object InitializeLifetimeService()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.InitializeLifetimeService();
     }
 
     public override string ToString()
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.ToString();
     }
     public override bool CanTimeout
     {
         get
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
             return base.CanTimeout;
         }
     }
@@ -347,69 +344,69 @@ public class FakeUdpNetworkStream : Stream
     {
         get
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
             return base.ReadTimeout;
         }
         set
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.ReadTimeout = value;
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.ReadTimeout = value;
         }
     }
     public override int WriteTimeout
     {
         get
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
             return base.WriteTimeout;
         }
         set
         {
-            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.WriteTimeout = value;
+            // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.WriteTimeout = value;
         }
     }
     public override Task FlushAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        // Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         return base.FlushAsync(cancellationToken);
     }
     public override void Write(ReadOnlySpan<byte> buffer)
     {
-        Console.WriteLine("Write(ReadOnlySpan<byte> buffer)!");
+        // Console.WriteLine("Write(ReadOnlySpan<byte> buffer)!");
 
         bind_it_now();
-        Console.WriteLine("Write!");
+        // Console.WriteLine("Write!");
         base.Write(buffer);
     }
     public override void WriteByte(byte value)
     {
-        Console.Write("WriteByte");
+        // Console.Write("WriteByte");
         base.WriteByte(value);
     }
     public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
     {
-        Console.Write("BeginWrite!");
+        // Console.Write("BeginWrite!");
         return base.BeginWrite(buffer, offset, count, callback, state);
     }
     public override void EndWrite(IAsyncResult asyncResult)
     {
-        Console.WriteLine("EndWrite!");
+        // Console.WriteLine("EndWrite!");
         base.EndWrite(asyncResult);
     }
     public override void CopyTo(Stream destination, int bufferSize)
     {
-        Console.WriteLine("CopyTo!");
+        // Console.WriteLine("CopyTo!");
         base.CopyTo(destination, bufferSize);
     }
     public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
     {
-        Console.WriteLine("CopyToAsync!");
+        // Console.WriteLine("CopyToAsync!");
         return base.CopyToAsync(destination, bufferSize, cancellationToken);
     }
 
     private byte[] ReadAsyncBuffer;
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        Console.WriteLine("ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
+        // Console.WriteLine("ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
 
         bind_it_now();
 
@@ -459,28 +456,28 @@ public class FakeUdpNetworkStream : Stream
                     ReadAsyncBuffer = newAsyncBuffer;
                 }
             }
-            Console.WriteLine($@"actualRead = {actualRead}");
+            // Console.WriteLine($@"actualRead = {actualRead}");
             return actualRead;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.ToString());
+            // Console.WriteLine(ex.ToString());
         }
         return 0;
     }
     public override int Read(Span<byte> buffer)
     {
-        Console.WriteLine("Read!");
+        // Console.WriteLine("Read!");
         return base.Read(buffer);
     }
     public override int ReadByte()
     {
-        Console.WriteLine("ReadByte!");
+        // Console.WriteLine("ReadByte!");
         return base.ReadByte();
     }
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine("ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)!");
+        // Console.WriteLine("ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)!");
 
         bind_it_now();
         var buff = new byte[buffer.Length];
@@ -501,7 +498,7 @@ public class FakeUdpListener
     public FakeUdpListener(IPAddress localaddr, int port)
     {
         _localEndPoint = new IPEndPoint(localaddr, port);
-        Console.WriteLine(_localEndPoint);
+        // Console.WriteLine(_localEndPoint);
         _udpClient = new UdpClientEx(_localEndPoint);
         _gaveOneClient = 0;
     }
@@ -513,7 +510,7 @@ public class FakeUdpListener
 
     public void Stop()
     {
-        Console.WriteLine("Stop");
+        // Console.WriteLine("Stop");
         _isListening = false;
         _udpClient.Close();
     }
@@ -683,7 +680,7 @@ public class UdpStreamPiperFactory : IPiperFactory
 
     public IPiper NewPiper()
     {
-        Console.WriteLine("newPiper!!!");
+        // Console.WriteLine("newPiper!!!");
         return new UdpStreamPiper(_info.Host, _info.Port);
     }
 
