@@ -1,5 +1,11 @@
 ﻿using System.Net.Sockets;
 using System.Net;
+using System.ComponentModel;
+using ObjectDumper;
+using System.Diagnostics;
+using System;
+using System.Reflection.PortableExecutable;
+
 namespace Firejox.App.WinSocat;
 
 public class UdpStreamPiperInfo
@@ -95,8 +101,10 @@ public class UdpClientEx : UdpClient
     }
 
     // Used by client 
-    public UdpClientEx(string hostname, int port) : base(hostname, port)
+    public UdpClientEx(string hostname, int port) : base(port)
     {
+        Console.WriteLine("UdpClientEx!");
+        base.Connect(hostname, port);
         _remoteEndPoint = base.Client.RemoteEndPoint as IPEndPoint ?? throw new Exception("Help me!!!");
         _stream = new FakeUdpNetworkStream(this);
     }
@@ -151,6 +159,15 @@ public class UdpClientEx : UdpClient
     }
 }
 
+public static class whatever
+{
+    public static void AddRange(this List<byte> me, byte[] buffer, int offset, int count)
+    {
+        var newbuffer = new byte[count];
+        Buffer.BlockCopy(buffer, offset, newbuffer, 0, count);
+        me.AddRange(newbuffer);
+    }
+}
 public class FakeUdpNetworkStream : Stream
 {
     private readonly UdpClientEx _udpClient;
@@ -159,7 +176,7 @@ public class FakeUdpNetworkStream : Stream
     public FakeUdpNetworkStream(UdpClientEx udpClient)
     {
         _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
-        _remoteEndPoint = udpClient.Client.RemoteEndPoint as IPEndPoint ?? throw new ArgumentNullException(nameof(udpClient.Client.RemoteEndPoint));
+        _remoteEndPoint = udpClient.RemoteEndPoint as IPEndPoint ?? null!;
     }
 
     public override bool CanRead => true;
@@ -183,8 +200,7 @@ public class FakeUdpNetworkStream : Stream
     public override int Read(byte[] buffer, int offset, int count)
     {
         var actual_copy = 0;
-        IPEndPoint? remoteEP = null;
-        var data = _udpClient.Receive(ref remoteEP);
+        var data = _udpClient.Receive(ref _remoteEndPoint);
         if (data != null)
         {
             actual_copy = data.Length < count ? data.Length : count;
@@ -201,43 +217,63 @@ public class FakeUdpNetworkStream : Stream
     public override void SetLength(long value)
     {
         throw new NotImplementedException();
-    }
-
+    }  
+    const int magic = 1024;
+    List<byte> _writeBuffer = new List<byte>();
     public override void Write(byte[] buffer, int offset, int count)
     {
-        Console.WriteLine("write!!!");
-        var mybuffer = new byte[count];
-        Buffer.BlockCopy(buffer, offset, mybuffer, 0, count);
-        _udpClient.Send(mybuffer, count, _remoteEndPoint);   
+        Console.WriteLine("Write(byte[] buffer, int offset, int count)!");
+
+        _writeBuffer.AddRange(buffer, offset, count);
+        var theCount = Math.Min(magic, count - offset);
+        var dataToSend = _writeBuffer.GetRange(0, theCount).ToArray();
+        var bytesSent = _udpClient.Send(dataToSend, dataToSend.Length, _remoteEndPoint);
+        _writeBuffer.RemoveRange(0, bytesSent);
     }
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
+        Console.WriteLine("WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
+        Console.WriteLine($"send to {_remoteEndPoint}");
         var d = new ReadOnlyMemory<byte>(buffer, offset, count);
-        Console.WriteLine(_remoteEndPoint);
         try
         {
             if(_udpClient.RemoteEndPoint!= null)
             {
-                return _udpClient.SendAsync(d, cancellationToken).AsTask();
+                await _udpClient.SendAsync(d, cancellationToken);
             }
             else
             {
-                return _udpClient.SendAsync(d, _remoteEndPoint, cancellationToken).AsTask();
+                await _udpClient.SendAsync(d, _remoteEndPoint, cancellationToken);
             }
         }
         catch (Exception e)
         { 
             Console.WriteLine(e); 
-        }   
-        return Task.CompletedTask;
+        }
+        Console.WriteLine("hihi");
     }
-    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public void bind_it_now()
     {
-        Console.WriteLine("WriteAsync!");
-        return base.WriteAsync(buffer, cancellationToken);
+        try
+        {
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, _udpClient.RemoteEndPoint.Port));
+        }
+        catch (Exception e)
+        {
+            //Console.WriteLine(e);
+        }
+    }
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine("WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)!");
+
+        await this.WriteAsync(buffer.Span.ToArray(), 0, buffer.Length, cancellationToken);
     }
     public override void Write(ReadOnlySpan<byte> buffer)
     {
+        Console.WriteLine("Write(ReadOnlySpan<byte> buffer)!");
+
+        bind_it_now();
         Console.WriteLine("Write!");
         base.Write(buffer);
     }
@@ -266,10 +302,68 @@ public class FakeUdpNetworkStream : Stream
         Console.WriteLine("CopyToAsync!");
         return base.CopyToAsync(destination, bufferSize, cancellationToken);
     }
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+
+    private byte[] ReadAsyncBuffer;
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        Console.WriteLine("ReadAsync!!");
-        return base.ReadAsync(buffer, offset, count, cancellationToken);
+        Console.WriteLine("ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)!");
+
+        bind_it_now();
+
+        try
+        {
+            var res = await _udpClient.ReceiveAsync(cancellationToken);
+            var actualRead = 0;
+
+            _remoteEndPoint = res.RemoteEndPoint;
+
+            if (ReadAsyncBuffer != null)
+            {
+                int toCopy = Math.Min(count, ReadAsyncBuffer.Length);
+                Buffer.BlockCopy(ReadAsyncBuffer, 0, buffer, offset, toCopy);
+                actualRead += toCopy;
+
+                if (ReadAsyncBuffer.Length > count)
+                {
+                    byte[] newAsyncBuffer = new byte[ReadAsyncBuffer.Length - count];
+                    Buffer.BlockCopy(ReadAsyncBuffer, count, newAsyncBuffer, 0, newAsyncBuffer.Length);
+                    ReadAsyncBuffer = newAsyncBuffer;
+                }
+                else
+                {
+                    ReadAsyncBuffer = null;
+                }
+            }
+
+            if (actualRead < count && res.Buffer.Length > 0)
+            {
+                int remaining = count - actualRead;
+                int toCopy = Math.Min(remaining, res.Buffer.Length);
+                Buffer.BlockCopy(res.Buffer, 0, buffer, offset + actualRead, toCopy);
+                actualRead += toCopy;
+
+                if (res.Buffer.Length > remaining)
+                {
+                    int existingLength = ReadAsyncBuffer?.Length ?? 0;
+                    byte[] newAsyncBuffer = new byte[existingLength + res.Buffer.Length - remaining];
+
+                    if (ReadAsyncBuffer != null)
+                    {
+                        Buffer.BlockCopy(ReadAsyncBuffer, 0, newAsyncBuffer, 0, existingLength);
+                    }
+
+                    Buffer.BlockCopy(res.Buffer, remaining, newAsyncBuffer, existingLength, newAsyncBuffer.Length - existingLength);
+                    ReadAsyncBuffer = newAsyncBuffer;
+                }
+            }
+            Console.WriteLine($@"actualRead = {actualRead}");
+            return actualRead;
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+        return 0;
     }
     public override int Read(Span<byte> buffer)
     {
@@ -281,10 +375,15 @@ public class FakeUdpNetworkStream : Stream
         Console.WriteLine("ReadByte!");
         return base.ReadByte();
     }
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine("ReadAsync!");
-        return base.ReadAsync(buffer, cancellationToken);
+        Console.WriteLine("ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)!");
+
+        bind_it_now();
+        var buff = new byte[buffer.Length];
+        var res = await this.ReadAsync(buff, 0, buff.Length, cancellationToken);
+        buff.CopyTo(buffer.Span);
+        return res;
     }
     
 }
@@ -297,8 +396,7 @@ public class FakeUdpListener
     private long _gaveOneClient;
 
     public FakeUdpListener(IPAddress localaddr, int port)
-    {
-        
+    {        
         _localEndPoint = new IPEndPoint(localaddr, port);
         Console.WriteLine(_localEndPoint); 
         _udpClient = new UdpClientEx(_localEndPoint);
@@ -326,20 +424,9 @@ public class FakeUdpListener
 
         if (0 != Interlocked.CompareExchange(ref _gaveOneClient, 1, 0))
         {
-            Console.WriteLine("hihi!!!");
-            // forever
             return await new TaskCompletionSource<UdpClientEx>().Task;
-        }
-        
-        UdpReceiveResult result = await _udpClient.ReceiveAsync();
-        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
-        Console.WriteLine(new System.Diagnostics.StackTrace());
-
-        UdpClientEx client = new UdpClientEx();
-
-        client.Connect(remoteEndPoint);
-
-        return client;
+        }        
+        return _udpClient;
     }
 
     public UdpClientEx AcceptUdpClient()
