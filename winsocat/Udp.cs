@@ -25,7 +25,7 @@ public class UdpStreamPiperInfo
     public static UdpStreamPiperInfo TryParse(AddressElement element)
     {
         if (!element.Tag.Equals("UDP", StringComparison.OrdinalIgnoreCase)) return null!;
-        
+
         string host;
         int sepIndex = element.Address.LastIndexOf(':');
 
@@ -33,7 +33,7 @@ public class UdpStreamPiperInfo
             host = "0.0.0.0";
         else
             host = element.Address.Substring(0, sepIndex);
-            
+
         int port = Int32.Parse(element.Address.Substring(sepIndex + 1));
 
         return new UdpStreamPiperInfo(host, port);
@@ -53,14 +53,14 @@ public class UdpListenPiperInfo
         _address = address;
         _port = port;
     }
-    
+
     public static UdpListenPiperInfo TryParse(AddressElement element)
     {
         if (element.Tag.Equals("UDP-LISTEN", StringComparison.OrdinalIgnoreCase))
         {
             IPAddress address;
             int sepIndex = element.Address.LastIndexOf(':');
-            
+
             if (sepIndex == -1 || sepIndex == 0)
                 address = IPAddress.Any;
             else
@@ -86,15 +86,16 @@ public class UdpClientEx : UdpClient
     {
         get
         {
-            return _remoteEndPoint;                        
+            return _remoteEndPoint;
         }
-        set { 
-            _remoteEndPoint = value;                            
+        set
+        {
+            _remoteEndPoint = value;
         }
     }
 
     // Used by listener
-    public UdpClientEx(): base()
+    public UdpClientEx() : base()
     {
         _remoteEndPoint = null!;
         _stream = Stream.Null;
@@ -147,7 +148,7 @@ public class UdpClientEx : UdpClient
         this.FakeConnect(endPoint, false);
     }
 
-    public void FakeConnect(IPEndPoint endPoint, bool force=false)
+    public void FakeConnect(IPEndPoint endPoint, bool force = false)
     {
         // If not force, get UDP from everywhere
         if (force)
@@ -161,6 +162,10 @@ public class UdpClientEx : UdpClient
 
 public static class whatever
 {
+    public static void k()
+    {
+        Console.WriteLine(new System.Diagnostics.StackTrace());
+    }
     public static void AddRange(this List<byte> me, byte[] buffer, int offset, int count)
     {
         var newbuffer = new byte[count];
@@ -168,11 +173,12 @@ public static class whatever
         me.AddRange(newbuffer);
     }
 }
+
 public class FakeUdpNetworkStream : Stream
 {
     private readonly UdpClientEx _udpClient;
     private IPEndPoint _remoteEndPoint;
-    
+
     public FakeUdpNetworkStream(UdpClientEx udpClient)
     {
         _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
@@ -182,19 +188,34 @@ public class FakeUdpNetworkStream : Stream
     public override bool CanRead => true;
     public override bool CanSeek => false;
     public override bool CanWrite => true;
-    public override long Length => throw new NotSupportedException();
-    
+    public override long Length
+    {
+        get
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            return 5566;
+        }
+    }
+
     public override long Position
     {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
+        get
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            return 5566;
+        }
+        set
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        }
     }
 
     public override void Flush()
     {
-        throw new NotImplementedException();
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        //throw new NotImplementedException();
     }
-    
+
     // I have no buffer
     // Data loss if buffer too small
     public override int Read(byte[] buffer, int offset, int count)
@@ -211,13 +232,15 @@ public class FakeUdpNetworkStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         throw new NotImplementedException();
     }
 
     public override void SetLength(long value)
     {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
         throw new NotImplementedException();
-    }  
+    }
     const int magic = 1024;
     List<byte> _writeBuffer = new List<byte>();
     public override void Write(byte[] buffer, int offset, int count)
@@ -237,7 +260,7 @@ public class FakeUdpNetworkStream : Stream
         var d = new ReadOnlyMemory<byte>(buffer, offset, count);
         try
         {
-            if(_udpClient.RemoteEndPoint!= null)
+            if (_udpClient.RemoteEndPoint != null)
             {
                 await _udpClient.SendAsync(d, cancellationToken);
             }
@@ -247,8 +270,8 @@ public class FakeUdpNetworkStream : Stream
             }
         }
         catch (Exception e)
-        { 
-            Console.WriteLine(e); 
+        {
+            Console.WriteLine(e);
         }
         Console.WriteLine("hihi");
     }
@@ -268,6 +291,86 @@ public class FakeUdpNetworkStream : Stream
         Console.WriteLine("WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)!");
 
         await this.WriteAsync(buffer.Span.ToArray(), 0, buffer.Length, cancellationToken);
+        Console.WriteLine("hihihih!!");
+        whatever.k();
+    }
+    public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.BeginRead(buffer, offset, count, callback, state);
+    }
+    public override void Close()
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        base.Close();
+    }
+    public override ValueTask DisposeAsync()
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.DisposeAsync();
+    }
+    public override int EndRead(IAsyncResult asyncResult)
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.EndRead(asyncResult);
+    }
+    public override bool Equals(object? obj)
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.Equals(obj);
+    }
+    public override int GetHashCode()
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.GetHashCode();
+    }
+    public override object InitializeLifetimeService()
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.InitializeLifetimeService();
+    }
+
+    public override string ToString()
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.ToString();
+    }
+    public override bool CanTimeout
+    {
+        get
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            return base.CanTimeout;
+        }
+    }
+    public override int ReadTimeout
+    {
+        get
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            return base.ReadTimeout;
+        }
+        set
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.ReadTimeout = value;
+        }
+    }
+    public override int WriteTimeout
+    {
+        get
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+            return base.WriteTimeout;
+        }
+        set
+        {
+            Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod()); base.WriteTimeout = value;
+        }
+    }
+    public override Task FlushAsync(CancellationToken cancellationToken)
+    {
+        Console.WriteLine(System.Reflection.MethodBase.GetCurrentMethod());
+        return base.FlushAsync(cancellationToken);
     }
     public override void Write(ReadOnlySpan<byte> buffer)
     {
@@ -359,7 +462,7 @@ public class FakeUdpNetworkStream : Stream
             Console.WriteLine($@"actualRead = {actualRead}");
             return actualRead;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine(ex.ToString());
         }
@@ -385,7 +488,7 @@ public class FakeUdpNetworkStream : Stream
         buff.CopyTo(buffer.Span);
         return res;
     }
-    
+
 }
 
 public class FakeUdpListener
@@ -396,9 +499,9 @@ public class FakeUdpListener
     private long _gaveOneClient;
 
     public FakeUdpListener(IPAddress localaddr, int port)
-    {        
+    {
         _localEndPoint = new IPEndPoint(localaddr, port);
-        Console.WriteLine(_localEndPoint); 
+        Console.WriteLine(_localEndPoint);
         _udpClient = new UdpClientEx(_localEndPoint);
         _gaveOneClient = 0;
     }
@@ -425,7 +528,7 @@ public class FakeUdpListener
         if (0 != Interlocked.CompareExchange(ref _gaveOneClient, 1, 0))
         {
             return await new TaskCompletionSource<UdpClientEx>().Task;
-        }        
+        }
         return _udpClient;
     }
 
@@ -449,8 +552,8 @@ public class UdpListenPiper : IListenPiper
         _server = server;
         _server.Start();
     }
-    
-    public UdpListenPiper(IPAddress address, int port) : this(new FakeUdpListener(address, port)) {}
+
+    public UdpListenPiper(IPAddress address, int port) : this(new FakeUdpListener(address, port)) { }
 
     public IPiper NewIncomingPiper()
     {
@@ -506,7 +609,7 @@ public class UdpListenPiperStrategy : ListenPiperStrategy
     public static UdpListenPiperStrategy TryParse(AddressElement element)
     {
         UdpListenPiperInfo info;
-        
+
         if ((info = UdpListenPiperInfo.TryParse(element)) != null)
             return new UdpListenPiperStrategy(info);
 
@@ -548,8 +651,8 @@ public class UdpStreamPiper : StreamPiper
     {
         _client = client;
     }
-    
-    public UdpStreamPiper(string host, int port) : this(new UdpClientEx(host, port)) {}
+
+    public UdpStreamPiper(string host, int port) : this(new UdpClientEx(host, port)) { }
 
     protected override void Dispose(bool disposing)
     {
